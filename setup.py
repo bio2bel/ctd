@@ -26,6 +26,9 @@ INSTALL_REQUIRES = [
     'pybel>=0.11.1',
     'bio2bel',
 ]
+EXTRAS_REQUIRE = {
+    'web': ['flask', 'flask-admin'],
+}
 ENTRY_POINTS = {
     'bio2bel': [
         'ctd = bio2bel_ctd',
@@ -80,5 +83,6 @@ if __name__ == '__main__':
         packages=PACKAGES,
         package_dir={'': 'src'},
         install_requires=INSTALL_REQUIRES,
+        extras_require=EXTRAS_REQUIRE,
         entry_points=ENTRY_POINTS,
     )
