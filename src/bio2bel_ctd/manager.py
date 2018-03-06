@@ -5,6 +5,7 @@ from bio2bel.utils import get_connection
 from pyctd.manager.database import DbManager
 from pyctd.manager.query import QueryManager
 from .constants import DATA_DIR, MODULE_NAME
+from .enrichment_utils import add_chemical_gene_interaction
 from .models import ChemGeneIxn, Chemical, Disease, Gene, Pathway
 
 __all__ = [
@@ -70,6 +71,48 @@ class Manager(QueryManager, DbManager):
             diseases=self.count_diseases(),
             pathways=self.count_pathways(),
         )
+
+    def get_chemical_by_mesh(self, mesh_id):
+        """Gets a chemical by its MeSH identifier
+
+        :param str mesh_id: A MeSH identifier of a chemical
+        :rtype: Optional[Chemical]
+        """
+        return self.session.query(Chemical).filter(Chemical.chemical_id == mesh_id).one_or_none()
+
+    def get_gene_by_entrez_id(self, entrez_id):
+        """Gets a gene by its Entrez Gene identifier
+
+        :param str entrez_id: An Entrez Gene identifier of a gene
+        :rtype: Optional[Gene]
+        """
+        return self.session.query(Gene).filter(Gene.gene_id == entrez_id).one_or_none()
+
+    def enrich_graph_chemical(self, graph, mesh_id):
+        """Enriches the BEL graph with chemical-gene interactions for the given chemical
+
+        :param pybel.BELGraph graph: A BEL graph
+        :param mesh_id: A MeSH identifier of a chemical
+        """
+        chemical = self.get_chemical_by_mesh(mesh_id)
+        if chemical is None:
+            return
+
+        for ixn in chemical.gene_interactions:
+            add_chemical_gene_interaction(graph, ixn)
+
+    def enrich_graph_gene(self, graph, entrez_id):
+        """Enriches the BEL graph with chemical-gene interactions for the given gene
+
+        :param pybel.BELGraph graph: A BEL graph
+        :param str entrez_id: An Entrez Gene identifier of a gene
+        """
+        gene = self.get_gene_by_entrez_id(entrez_id)
+        if gene is None:
+            return
+
+        for ixn in gene.chemical_interactions:
+            add_chemical_gene_interaction(graph, ixn)
 
     def enrich_chemicals(self, graph):
         """Finds chemicals that can be mapped and enriched with the CTD
