@@ -25,6 +25,7 @@ CLASSIFIERS = [
 INSTALL_REQUIRES = [
     'pybel>=0.11.1',
     'bio2bel',
+    'click',
 ]
 EXTRAS_REQUIRE = {
     'web': ['flask', 'flask-admin'],
