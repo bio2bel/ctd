@@ -1,1 +1,2 @@
 pybel>=0.11.1
+bio2bel
