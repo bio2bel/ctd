@@ -1,5 +1,6 @@
 pybel>=0.11.1
 bio2bel
+pyctd
 click
 flask[web]
 flask_admin[web]

@@ -25,6 +25,7 @@ CLASSIFIERS = [
 INSTALL_REQUIRES = [
     'pybel>=0.11.1',
     'bio2bel',
+    'pyctd',
     'click',
 ]
 EXTRAS_REQUIRE = {
