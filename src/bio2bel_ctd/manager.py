@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 
 import pyctd.manager.database
+from bio2bel.abstractmanager import AbstractManager
 from bio2bel.utils import get_connection
 from pyctd.manager.database import DbManager
+from pyctd.manager.models import Base
 from pyctd.manager.query import QueryManager
 from .constants import DATA_DIR, MODULE_NAME
 from .enrichment_utils import add_chemical_gene_interaction
@@ -21,9 +23,17 @@ def _get_connection_string(connection):
 pyctd.manager.database.get_connection_string = _get_connection_string
 
 
-class Manager(QueryManager, DbManager):
+class _PyCTDManager(QueryManager, DbManager):
     # Override the directory in which data gets stored
     pyctd_data_dir = DATA_DIR
+
+
+class Manager(AbstractManager, _PyCTDManager):
+    module_name = MODULE_NAME
+
+    @property
+    def base(self):
+        return Base
 
     def populate(self, *args, **kwargs):
         """Populates the database"""
@@ -120,17 +130,3 @@ class Manager(QueryManager, DbManager):
         :param pybel.BELGraph graph:
         """
         raise NotImplementedError
-
-    @staticmethod
-    def ensure(connection=None):
-        """Checks and allows for a Manager to be passed to the function.
-
-        :param connection: can be either a already build manager or a connection string to build a manager with.
-        """
-        if connection is None or isinstance(connection, str):
-            return Manager(connection=connection)
-
-        if isinstance(connection, Manager):
-            return connection
-
-        raise TypeError
