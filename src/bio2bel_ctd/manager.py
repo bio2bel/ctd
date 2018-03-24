@@ -158,9 +158,11 @@ class Manager(AbstractManager, _PyCTDManager):
 
         .. warning:: Not complete!
 
-        .. todo:: add namespaces
-        .. todo:: use cursors
-        .. todo:: multiprocessing
+        To do:
+
+        - add namespaces
+        - use cursors
+        - multiprocessing
         """
         graph = BELGraph(name='CTD', version='1.0.0')
 
