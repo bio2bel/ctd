@@ -237,5 +237,12 @@ def ls(manager):
         )
 
 
+@main.command()
+@click.pass_obj
+def upload_bel(manager):
+    """Upload BEL to database"""
+    manager.upload_bel_graph()
+
+
 if __name__ == '__main__':
     main()

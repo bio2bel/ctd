@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
 
+import pybel
+from pybel import BELGraph
+from tqdm import tqdm
+
 import pyctd.manager.database
 from bio2bel.abstractmanager import AbstractManager
 from bio2bel.utils import get_connection
@@ -90,6 +94,14 @@ class Manager(AbstractManager, _PyCTDManager):
         """
         return self.session.query(Chemical).filter(Chemical.chemical_id == mesh_id).one_or_none()
 
+    def get_chemical_by_cas(self, cas_rn):
+        """Gets a chemical by its CAS Registry Number
+
+        :param str cas_rn: A CAS Registry Number
+        :rtype: Optional[Chemical]
+        """
+        return self.session.query(Chemical).filter(Chemical.cas_rn == cas_rn).one_or_none()
+
     def get_gene_by_entrez_id(self, entrez_id):
         """Gets a gene by its Entrez Gene identifier
 
@@ -97,6 +109,14 @@ class Manager(AbstractManager, _PyCTDManager):
         :rtype: Optional[Gene]
         """
         return self.session.query(Gene).filter(Gene.gene_id == entrez_id).one_or_none()
+
+    def get_interaction_by_id(self, ixn_id):
+        """Gets an interaction by its database identifier
+
+        :param int ixn_id: An interaction database identifier
+        :rtype: Optional[ChemGeneIxn]
+        """
+        return self.session.query(ChemGeneIxn).filter(ChemGeneIxn.id == ixn_id).one_or_none()
 
     def enrich_graph_chemical(self, graph, mesh_id):
         """Enriches the BEL graph with chemical-gene interactions for the given chemical
@@ -130,3 +150,26 @@ class Manager(AbstractManager, _PyCTDManager):
         :param pybel.BELGraph graph:
         """
         raise NotImplementedError
+
+    def to_bel_graph(self):
+        """Converts all possible aspects of the database to BEL.
+
+        :rtype: pybel.BELGraph
+
+        .. warning:: Not complete!
+
+        .. todo:: add namespaces
+        .. todo:: use cursors
+        .. todo:: multiprocessing
+        """
+        graph = BELGraph(name='CTD', version='1.0.0')
+
+        for ixn in tqdm(self.session.query(ChemGeneIxn).all(), total=self.count_chemical_gene_interactions()):
+            add_chemical_gene_interaction(graph, ixn)
+
+        return graph
+
+    def upload_bel_graph(self, connection=None):
+        """Converts CTD to BEL and uploads to PyBEL"""
+        graph = self.to_bel_graph()
+        pybel.to_database(graph, connection=connection)
