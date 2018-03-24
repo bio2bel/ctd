@@ -3,12 +3,13 @@
 """Run this script with :code:`python3 -m bio2bel_ctd`"""
 
 import logging
+import sys
 
 import click
 
 from .constants import DEFAULT_CACHE_CONNECTION
 from .manager import Manager
-from .models import Chemical, Gene
+from .models import Action, Chemical, Gene
 
 
 @click.group()
@@ -16,7 +17,8 @@ from .models import Chemical, Gene
 @click.pass_context
 def main(ctx, connection):
     """Convert CTD to BEL"""
-    logging.basicConfig(level=10, format="%(asctime)s - %(levelname)s - %(message)s")
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(name)s - %(message)s")
+    logging.getLogger('bio2bel.utils').setLevel(logging.ERROR)
     ctx.obj = Manager(connection=connection)
 
 
@@ -63,23 +65,60 @@ def manage():
 
 @manage.group()
 def chemicals():
-    pass
+    """Manage chemicals"""
+
+
+def _echo_chemical(chemical, interaction_limit=None):
+    click.echo('ID: {}'.format(chemical.id))
+    click.echo('Name: {}'.format(chemical.chemical_name))
+    click.echo('MeSH Identifier: {}'.format(chemical.chemical_id))
+    if chemical.cas_rn:
+        click.echo('CAS Registry Number: {}'.format(chemical.cas_rn))
+    if chemical.definition:
+        click.echo('Definition: {}'.format(chemical.definition))
+
+    interactions = chemical.gene_interactions
+    if interaction_limit is not None and interaction_limit > 0:
+        interactions = interactions.limit(interaction_limit)
+
+    if interactions:
+        click.echo('Interactions (sample)')
+        for interaction in interactions:
+            click.echo(' - ({}) {}'.format(interaction.id, interaction))
 
 
 @chemicals.command()
 @click.argument('mesh_id')
+@click.option('-i', '--interaction-limit', type=int, default=5)
 @click.pass_obj
-def get(manager, mesh_id):
+def get(manager, mesh_id, interaction_limit):
     """Get a chemical by its MeSH identifier. Try MESH:C490728 for lapatinib"""
     chemical = manager.get_chemical_by_mesh(mesh_id)
 
     if chemical is None:
-        click.echo('Not found: {}'.format(mesh_id))
-    else:
-        click.echo('MeSH Identifier: {}'.format(chemical.chemical_id))
-        click.echo('Name: {}'.format(chemical.chemical_name))
-        if chemical.definition:
-            click.echo('Definition: {}'.format(chemical.definition))
+        click.echo('MeSH Identifier not found: {}'.format(mesh_id))
+        sys.exit(0)
+
+    _echo_chemical(chemical, interaction_limit=interaction_limit)
+
+
+@chemicals.command()
+@click.argument('cas_rn')
+@click.option('-i', '--interaction-limit', type=int, default=5)
+@click.pass_obj
+def get_cas(manager, cas_rn, interaction_limit):
+    """Get a chemical by its CAS Registry Number. Try 55-18-5 for Diethylnitrosamine"""
+    chemical = manager.get_chemical_by_cas(cas_rn)
+
+    if chemical is None:
+        click.echo('CAS Registry Number not found: {}'.format(cas_rn))
+        sys.exit(0)
+
+    _echo_chemical(chemical, interaction_limit=interaction_limit)
+
+
+def _echot(*t):
+    click.echo('\t'.join(map(str, t)))
 
 
 @chemicals.command()
@@ -95,20 +134,20 @@ def ls(manager, limit, offset):
     if offset is not None:
         query = query.offset(offset)
 
-    click.echo('\t'.join(('MeSH', 'Name', 'Definition', 'Parents')))
+    _echot('MeSH', 'Name', 'Definition', 'Parents')
 
     for chemical in query:
-        click.echo('\t'.join(map(str, (
+        _echot(
             chemical.chemical_id,
             chemical.chemical_name,
             chemical.definition,
             '|'.join(map(str, chemical.parent_ids))
-        ))))
+        )
 
 
 @manage.group()
 def genes():
-    pass
+    """Manage genes"""
 
 
 @genes.command()
@@ -120,13 +159,14 @@ def get(manager, entrez_id):
 
     if gene is None:
         click.echo('Not found: {}'.format(entrez_id))
-    else:
-        click.echo('Entrez Gene Identifier: {}'.format(gene.gene_id))
-        click.echo('Name: {}'.format(gene.gene_name))
-        click.echo('Symbol: {}'.format(gene.gene_symbol))
+        sys.exit(0)
 
-        for ixn in gene.chemical_interactions.limit(5):
-            click.echo(ixn)
+    click.echo('Entrez Gene Identifier: {}'.format(gene.gene_id))
+    click.echo('Name: {}'.format(gene.gene_name))
+    click.echo('Symbol: {}'.format(gene.gene_symbol))
+
+    for ixn in gene.chemical_interactions.limit(5):
+        click.echo(ixn)
 
 
 @genes.command()
@@ -142,14 +182,59 @@ def ls(manager, limit, offset):
     if offset is not None:
         query = query.offset(offset)
 
-    click.echo('\t'.join(('EGID', 'Name', 'Symbol')))
+    _echot('EGID', 'Name', 'Symbol')
 
     for gene in query:
-        click.echo('\t'.join(map(str, (
+        _echot(
             gene.gene_id,
             gene.gene_name,
             gene.gene_symbol,
-        ))))
+        )
+
+
+@manage.group()
+def ixns():
+    """Manage chemical-gene interactions"""
+
+
+@ixns.command()
+@click.argument('ixn_id')
+@click.pass_obj
+def get(manager, ixn_id):
+    """Get a interaction by its database identifier"""
+    ixn = manager.get_interaction_by_id(ixn_id)
+
+    if ixn is None:
+        click.echo('Interaction not found: {}'.format(ixn_id))
+        sys.exit(0)
+
+    click.echo('Chemical: {}'.format(ixn.chemical))
+    click.echo('Gene: {}'.format(ixn.gene))
+    click.echo('Interaction: {}'.format(ixn.interaction))
+
+    for action in ixn.interaction_actions:
+        click.echo('Action: {}'.format(action))
+
+    for gene_form in ixn.gene_forms:
+        click.echo('Gene Form: {}'.format(gene_form))
+
+
+@manage.group()
+def actions():
+    """Manage chemical-gene interaction actions"""
+
+
+@actions.command()
+@click.pass_obj
+def ls(manager):
+    _echot('Type Name', 'Code', 'Description', 'Parent Code')
+    for action in manager.session.query(Action).all():
+        _echot(
+            action.type_name,
+            action.code,
+            action.description,
+            action.parent_code
+        )
 
 
 if __name__ == '__main__':
