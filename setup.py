@@ -27,6 +27,7 @@ INSTALL_REQUIRES = [
     'bio2bel',
     'pyctd',
     'click',
+    'tqdm',
 ]
 EXTRAS_REQUIRE = {
     'web': ['flask', 'flask-admin'],
