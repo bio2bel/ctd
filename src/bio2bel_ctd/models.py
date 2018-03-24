@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 
-from pyctd.manager.models import ChemGeneIxn, Chemical, Gene, Pathway, Disease
+from pyctd.manager.models import Action, ChemGeneIxn, Chemical, Disease, Gene, Pathway
 
 __all__ = [
-    'Gene',
-    'ChemGeneIxn',
+    'Action',
     'Chemical',
-    'Pathway',
+    'ChemGeneIxn',
     'Disease',
+    'Gene',
+    'Pathway',
 ]
