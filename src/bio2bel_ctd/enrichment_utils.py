@@ -355,7 +355,7 @@ def add_ixn_increases_methylation(graph, ixn):
 
 
 def add_ixn_decreases_methylation(graph, ixn):
-    """Adds an interaction that represents the chemical increasing the methylation of a gene
+    """Adds an interaction that represents the chemical decreasing the methylation of a gene
 
     :param pybel.BELGraph graph: A BEL graph
     :param pyctd.manager.models.ChemGeneIxn ixn: A chemical-gene interaction
@@ -363,6 +363,17 @@ def add_ixn_decreases_methylation(graph, ixn):
     :rtype: str
     """
     return _add_ixn_changes_gmod(graph, ixn, DECREASES, 'Me')
+
+
+def add_ixn_regulates_methylation(graph, ixn):
+    """Adds an interaction that represents the chemical regulation of the methylation of a gene
+
+    :param pybel.BELGraph graph: A BEL graph
+    :param pyctd.manager.models.ChemGeneIxn ixn: A chemical-gene interaction
+    :return: The hash of the added edge
+    :rtype: str
+    """
+    return _add_ixn_changes_gmod(graph, ixn, REGULATES, 'Me')
 
 
 def add_ixn_increases_phosphorylation(graph, ixn):
@@ -630,6 +641,9 @@ def add_chemical_gene_interaction(graph, ixn):
 
     if _ixn_is_changes_gene(ixn, 'decreases^methylation'):
         return add_ixn_decreases_methylation(graph, ixn)
+
+    if _ixn_is_changes_gene(ixn, 'affects^methylation'):
+        return add_ixn_regulates_methylation(graph, ixn)
 
     if ixn_is_binding(ixn):
         return add_ixn_binding(graph, ixn)
