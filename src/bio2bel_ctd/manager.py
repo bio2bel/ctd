@@ -2,15 +2,16 @@
 
 import pybel
 from pybel import BELGraph
-from pybel.constants import FUNCTION, GENE, IDENTIFIER, NAME, NAMESPACE
+from pybel.constants import IDENTIFIER, NAME, NAMESPACE
 from tqdm import tqdm
 
 import pyctd.manager.database
 from bio2bel.abstractmanager import AbstractManager
-from bio2bel.utils import get_connection, bio2bel_populater
+from bio2bel.utils import bio2bel_populater, get_connection
 from pyctd.manager.database import DbManager
 from pyctd.manager.models import Base
 from pyctd.manager.query import QueryManager
+from pyctd.manager.table import get_table_configurations
 from .constants import DATA_DIR, MODULE_NAME
 from .enrichment_utils import add_chemical_gene_interaction
 from .models import ChemGeneIxn, Chemical, Disease, Gene, Pathway
@@ -35,6 +36,9 @@ class _PyCTDManager(QueryManager, DbManager):
 
 class Manager(AbstractManager, _PyCTDManager):
     module_name = MODULE_NAME
+
+    # Compensate for some weird structuring of PyCTD code
+    tables = get_table_configurations()
 
     @property
     def base(self):
