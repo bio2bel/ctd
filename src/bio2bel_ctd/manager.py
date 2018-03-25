@@ -2,6 +2,7 @@
 
 import pybel
 from pybel import BELGraph
+from pybel.constants import FUNCTION, GENE, IDENTIFIER, NAME, NAMESPACE
 from tqdm import tqdm
 
 import pyctd.manager.database
@@ -143,6 +144,26 @@ class Manager(AbstractManager, _PyCTDManager):
 
         for ixn in gene.chemical_interactions:
             add_chemical_gene_interaction(graph, ixn)
+
+    def enrich_graph_genes(self, graph):
+        """Enriches the BEL graph with chemical-gene interactions for all Entrez genes
+
+        :param pybel.BELGraph graph: A BEL graph
+        """
+        for gene_node, data in graph.nodes(data=True):
+            namespace = data.get(NAMESPACE)
+            if namespace not in {'EG', 'EGID', 'ENTREZ'}:
+                continue
+
+            identifier = data.get(IDENTIFIER)
+            name = data.get(NAME)
+
+            if identifier is not None:
+                self.enrich_graph_gene(graph, identifier)
+            elif name is not None:
+                self.enrich_graph_gene(graph, name)
+            else:
+                raise KeyError
 
     def enrich_chemicals(self, graph):
         """Finds chemicals that can be mapped and enriched with the CTD
