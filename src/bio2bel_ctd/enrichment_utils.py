@@ -4,8 +4,8 @@ import logging
 
 from pybel.constants import DECREASES, INCREASES, REGULATES, VARIANTS
 from pybel.dsl import (
-    abundance as abundance_dsl, activity, complex_abundance as complex_abundance_dsl, fragment, gene as gene_dsl, pmod,
-    protein as protein_dsl, reaction, rna as rna_dsl, translocation,
+    abundance as abundance_dsl, activity, complex_abundance as complex_abundance_dsl, fragment, gene as gene_dsl, gmod,
+    pmod, protein as protein_dsl, reaction, rna as rna_dsl, translocation,
 )
 
 log = logging.getLogger('bio2bel_ctd')
@@ -80,6 +80,15 @@ def _ixn_is_changes_entity(ixn, interaction_action, gene_form):
             len(forms) == 1 and
             forms[0].gene_form == gene_form
     )
+
+
+def _ixn_is_changes_gene(ixn, interaction_action):
+    """
+    :param pyctd.manager.models.ChemGeneIxn ixn: A chemical-gene interaction
+    :param str interaction_action:
+    :rtype: bool
+    """
+    return _ixn_is_changes_entity(ixn, interaction_action, 'gene')
 
 
 def _ixn_is_changes_mrna(ixn, interaction_action):
@@ -303,6 +312,48 @@ def _add_ixn_changes_pmod(graph, ixn, edge_type, pmod_name):
             'Species': str(ixn.organism_id)
         },
     )
+
+
+def _add_ixn_changes_gmod(graph, ixn, edge_type, pmod_name):
+    chemical = get_dsl_chemical(ixn)
+
+    gene = get_dsl_gene(ixn)
+    gene[VARIANTS] = [gmod(name=pmod_name)]
+
+    citation = get_citation(ixn)
+
+    return graph.add_qualified_edge(
+        chemical,
+        gene,
+        edge_type,
+        evidence=ixn.interaction,
+        citation=citation,
+        annotations={
+            'Species': str(ixn.organism_id)
+        },
+    )
+
+
+def add_ixn_increases_methylation(graph, ixn):
+    """Adds an interaction that represents the chemical increasing the methylation of a gene
+
+    :param pybel.BELGraph graph: A BEL graph
+    :param pyctd.manager.models.ChemGeneIxn ixn: A chemical-gene interaction
+    :return: The hash of the added edge
+    :rtype: str
+    """
+    return _add_ixn_changes_gmod(graph, ixn, INCREASES, 'Me')
+
+
+def add_ixn_decreases_methylation(graph, ixn):
+    """Adds an interaction that represents the chemical increasing the methylation of a gene
+
+    :param pybel.BELGraph graph: A BEL graph
+    :param pyctd.manager.models.ChemGeneIxn ixn: A chemical-gene interaction
+    :return: The hash of the added edge
+    :rtype: str
+    """
+    return _add_ixn_changes_gmod(graph, ixn, DECREASES, 'Me')
 
 
 def add_ixn_increases_phosphorylation(graph, ixn):
@@ -564,6 +615,12 @@ def add_chemical_gene_interaction(graph, ixn):
 
     if _ixn_is_changes_protein(ixn, 'decreases^oxidation'):
         return add_ixn_decreases_oxidation(graph, ixn)
+
+    if _ixn_is_changes_gene(ixn, 'increases^methylation'):
+        return add_ixn_increases_methylation(graph, ixn)
+
+    if _ixn_is_changes_gene(ixn, 'decreases^methylation'):
+        return add_ixn_decreases_methylation(graph, ixn)
 
     if ixn_is_binding(ixn):
         return add_ixn_binding(graph, ixn)
