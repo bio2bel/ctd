@@ -7,7 +7,7 @@ from tqdm import tqdm
 
 import pyctd.manager.database
 from bio2bel.abstractmanager import AbstractManager
-from bio2bel.utils import get_connection
+from bio2bel.utils import get_connection, bio2bel_populater
 from pyctd.manager.database import DbManager
 from pyctd.manager.models import Base
 from pyctd.manager.query import QueryManager
@@ -40,6 +40,7 @@ class Manager(AbstractManager, _PyCTDManager):
     def base(self):
         return Base
 
+    @bio2bel_populater(MODULE_NAME)
     def populate(self, *args, **kwargs):
         """Populates the database"""
         self.db_import(*args, **kwargs)
