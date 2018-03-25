@@ -154,6 +154,15 @@ def ixn_is_decreases_protein(ixn):
     return _ixn_is_changes_protein(ixn, 'decreases^expression')
 
 
+def ixn_is_regulates_protein(ixn):
+    """Checks if the interaction results in the decrease of the expression of the protein of the gene
+
+    :param pyctd.manager.models.ChemGeneIxn ixn: A chemical-gene interaction
+    :rtype: bool
+    """
+    return _ixn_is_changes_protein(ixn, 'affects^expression')
+
+
 def ixn_is_increases_activity(ixn):
     """Checks if the interaction results in the decrease of the activity of the protein of the gene
 
@@ -589,7 +598,7 @@ def add_chemical_gene_interaction(graph, ixn):
     if ixn_is_decreases_mrna(ixn) or ixn_is_decreases_protein(ixn):
         return add_ixn_decreases_expression(graph, ixn)
 
-    if ixn_is_regulates_mrna(ixn):
+    if ixn_is_regulates_mrna(ixn) or ixn_is_regulates_protein(ixn):
         return add_ixn_regulates_expression(graph, ixn)
 
     if ixn_is_increases_activity(ixn):
