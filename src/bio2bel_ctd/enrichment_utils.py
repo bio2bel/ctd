@@ -459,7 +459,7 @@ def add_ixn_affect_localization(graph, ixn):
     return graph.add_qualified_edge(
         chemical,
         protein,
-        INCREASES,
+        REGULATES,
         evidence=ixn.interaction,
         citation=citation,
         annotations={
