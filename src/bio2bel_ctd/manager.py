@@ -1,13 +1,17 @@
 # -*- coding: utf-8 -*-
 
-import pybel
-from pybel import BELGraph
-from pybel.constants import IDENTIFIER, NAME, NAMESPACE
-from tqdm import tqdm
+import logging
 
-import pyctd.manager.database
 from bio2bel.abstractmanager import AbstractManager
 from bio2bel.utils import bio2bel_populater, get_connection
+from tqdm import tqdm
+
+import pybel
+import pyctd
+import pyctd.manager
+import pyctd.manager.database
+from pybel import BELGraph
+from pybel.constants import IDENTIFIER, NAME, NAMESPACE
 from pyctd.manager.database import DbManager
 from pyctd.manager.models import Base
 from pyctd.manager.query import QueryManager
@@ -20,6 +24,8 @@ __all__ = [
     'Manager'
 ]
 
+log = logging.getLogger(__name__)
+
 
 def _get_connection_string(connection):
     return get_connection(module_name=MODULE_NAME, connection=connection)
@@ -27,6 +33,10 @@ def _get_connection_string(connection):
 
 # Monkey patch PyCTD connection loader
 pyctd.manager.database.get_connection_string = _get_connection_string
+
+_exclude_tables = {
+    'exposure_event'
+}
 
 
 class _PyCTDManager(QueryManager, DbManager):
@@ -45,9 +55,30 @@ class Manager(AbstractManager, _PyCTDManager):
         return Base
 
     @bio2bel_populater(MODULE_NAME)
-    def populate(self, *args, **kwargs):
-        """Populates the database"""
-        self.db_import(*args, **kwargs)
+    def populate(self, urls=None, force_download=False):
+        """Updates the CTD database
+
+        1. downloads all files from CTD
+        2. drops all tables in database
+        3. creates all tables in database
+        4. import all data from CTD files
+
+        :param iter[str] urls: An iterable of URL strings
+        :param bool force_download: force method to download
+        """
+        if not urls:
+            urls = [
+                pyctd.manager.defaults.url_base + pyctd.manager.table_conf.tables[model]['file_name']
+                for model in pyctd.manager.table_conf.tables
+            ]
+
+        log.info('Update CTD database from %s', urls)
+
+        self.drop_all()
+        self.download_urls(urls=urls, force_download=force_download)
+        self.create_all()
+        self.import_tables(exclude_tables=_exclude_tables)
+        self.session.close()
 
     def _count_model(self, model):
         return self.session.query(model).count()
