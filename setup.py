@@ -24,7 +24,7 @@ CLASSIFIERS = [
 ]
 INSTALL_REQUIRES = [
     'pybel>=0.11.1',
-    'bio2bel',
+    'bio2bel>=0.0.9',
     'pyctd',
     'click',
     'tqdm',

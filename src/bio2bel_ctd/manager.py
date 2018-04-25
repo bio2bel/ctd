@@ -1,17 +1,19 @@
 # -*- coding: utf-8 -*-
 
+"""Bio2BEL CTD Manager."""
+
 import logging
 
-from bio2bel.abstractmanager import AbstractManager
-from bio2bel.utils import bio2bel_populater, get_connection
+import pybel
+from pybel import BELGraph
+from pybel.constants import IDENTIFIER, NAME, NAMESPACE
 from tqdm import tqdm
 
-import pybel
 import pyctd
 import pyctd.manager
 import pyctd.manager.database
-from pybel import BELGraph
-from pybel.constants import IDENTIFIER, NAME, NAMESPACE
+from bio2bel.abstractmanager import AbstractManager
+from bio2bel.utils import get_connection
 from pyctd.manager.database import DbManager
 from pyctd.manager.models import Base
 from pyctd.manager.query import QueryManager
@@ -44,18 +46,33 @@ class _PyCTDManager(QueryManager, DbManager):
     pyctd_data_dir = DATA_DIR
 
 
+def _get_urls():
+    return [
+        pyctd.manager.defaults.url_base + pyctd.manager.table_conf.tables[model]['file_name']
+        for model in pyctd.manager.table_conf.tables
+    ]
+
+
 class Manager(AbstractManager, _PyCTDManager):
+    """Bio2BEL manager for the CTD."""
+
     module_name = MODULE_NAME
 
     # Compensate for some weird structuring of PyCTD code
     tables = get_table_configurations()
 
     @property
-    def base(self):
+    def _base(self):
         return Base
 
-    @bio2bel_populater(MODULE_NAME)
-    def populate(self, urls=None, force_download=False):
+    def is_populated(self):
+        """Check if the database is already populated.
+
+        :rtype: bool
+        """
+        return 0 < self.count_chemical_gene_interactions()
+
+    def populate(self, urls=None, force_download=False, only_tables=None,exclude_tables=None):
         """Updates the CTD database
 
         1. downloads all files from CTD
@@ -67,21 +84,15 @@ class Manager(AbstractManager, _PyCTDManager):
         :param bool force_download: force method to download
         """
         if not urls:
-            urls = [
-                pyctd.manager.defaults.url_base + pyctd.manager.table_conf.tables[model]['file_name']
-                for model in pyctd.manager.table_conf.tables
-            ]
+            urls = _get_urls()
 
         log.info('Update CTD database from %s', urls)
 
         self.drop_all()
         self.download_urls(urls=urls, force_download=force_download)
         self.create_all()
-        self.import_tables(exclude_tables=_exclude_tables)
+        self.import_tables(only_tables=only_tables, exclude_tables=(exclude_tables or _exclude_tables))
         self.session.close()
-
-    def _count_model(self, model):
-        return self.session.query(model).count()
 
     def count_genes(self):
         """Counts the genes in the database
@@ -105,9 +116,17 @@ class Manager(AbstractManager, _PyCTDManager):
         return self._count_model(ChemGeneIxn)
 
     def count_pathways(self):
+        """Counts the pathways in the database
+
+        :rtype: int
+        """
         return self._count_model(Pathway)
 
     def count_diseases(self):
+        """Counts the diseases in the database
+
+        :rtype: int
+        """
         return self._count_model(Disease)
 
     def summarize(self):

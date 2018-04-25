@@ -63,6 +63,7 @@ instance/
 
 # Sphinx documentation
 docs/_build/
+docs/build/
 
 # PyBuilder
 target/
@@ -101,3 +102,5 @@ ENV/
 .mypy_cache/
 
 .idea
+
+.pytest_cache

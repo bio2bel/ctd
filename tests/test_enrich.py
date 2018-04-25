@@ -24,7 +24,6 @@ ex_chebi_name = abundance(namespace='CHEBI', name='N-nitrosodiethylamine')
 ex_chebi_id = abundance(namespace='CHEBI', identifier='34873')
 
 abcc6 = rna(namespace='ENTREZ', name='ABCC6', identifier='368')
-abcc6_tuple = abcc6.as_tuple()
 
 
 class TestStuff(PopulatedDatabaseMixin):
@@ -35,17 +34,17 @@ class TestStuff(PopulatedDatabaseMixin):
 
         enrich_chemicals(graph, connection=self.connection)
 
-        self.assertIn(abcc6_tuple, graph)
+        self.assertIn(abcc6.as_tuple(), graph)
         # check that certain reactions are there?
 
         self.assertEqual(2, graph.number_of_nodes())
 
-        self.assertIn(abcc6_tuple, graph.edge[c_tuple])
+        self.assertIn(abcc6.as_tuple(), graph.edge[c_tuple])
 
         self.assertEqual(1, graph.number_of_edges())
 
-        key = list(graph.edge[c_tuple][abcc6_tuple])[0]
-        data = graph.edge[c_tuple][abcc6_tuple][key]
+        key = list(graph.edge[c_tuple][abcc6.as_tuple()])[0]
+        data = graph.edge[c_tuple][abcc6.as_tuple()][key]
 
         self.assertIn(RELATION, data)
         self.assertEqual(DECREASES, data[RELATION])
