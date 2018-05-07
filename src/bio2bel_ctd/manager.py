@@ -4,23 +4,22 @@
 
 import logging
 
-import pybel
-from pybel import BELGraph
-from pybel.constants import IDENTIFIER, NAME, NAMESPACE
 from tqdm import tqdm
 
+import pybel
 import pyctd
 import pyctd.manager
 import pyctd.manager.database
 from bio2bel.abstractmanager import AbstractManager
 from bio2bel.utils import get_connection
+from pybel import BELGraph
+from pybel.constants import IDENTIFIER, NAME, NAMESPACE
 from pyctd.manager.database import DbManager
-from pyctd.manager.models import Base
 from pyctd.manager.query import QueryManager
 from pyctd.manager.table import get_table_configurations
 from .constants import DATA_DIR, MODULE_NAME
 from .enrichment_utils import add_chemical_gene_interaction
-from .models import ChemGeneIxn, Chemical, Disease, Gene, Pathway
+from .models import Base, ChemGeneIxn, Chemical, Disease, Gene, Pathway
 
 __all__ = [
     'Manager'
@@ -72,7 +71,7 @@ class Manager(AbstractManager, _PyCTDManager):
         """
         return 0 < self.count_chemical_gene_interactions()
 
-    def populate(self, urls=None, force_download=False, only_tables=None,exclude_tables=None):
+    def populate(self, urls=None, force_download=False, only_tables=None, exclude_tables=None):
         """Updates the CTD database
 
         1. downloads all files from CTD
@@ -107,6 +106,13 @@ class Manager(AbstractManager, _PyCTDManager):
         :rtype: int
         """
         return self._count_model(Chemical)
+
+    def list_chemicals(self):
+        """List all chemicals.
+
+        :rtype: list[Chemical]
+        """
+        return self._list_model(Chemical)
 
     def count_chemical_gene_interactions(self):
         """Counts the chemical-gene interactions in the database
