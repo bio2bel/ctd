@@ -10,7 +10,7 @@ import pybel
 import pyctd
 import pyctd.manager
 import pyctd.manager.database
-from bio2bel.abstractmanager import AbstractManager
+from bio2bel import AbstractManager
 from bio2bel.utils import get_connection
 from pybel import BELGraph
 from pybel.constants import IDENTIFIER, NAME, NAMESPACE
