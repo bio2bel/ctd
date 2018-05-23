@@ -100,6 +100,13 @@ class Manager(AbstractManager, _PyCTDManager):
         """
         return self._count_model(Gene)
 
+    def list_chemicals(self):
+        """List all chemicals.
+
+        :rtype: list[Chemical]
+        """
+        return self._list_model(Chemical)
+
     def count_chemicals(self):
         """Counts the chemicals in the database
 
@@ -107,12 +114,12 @@ class Manager(AbstractManager, _PyCTDManager):
         """
         return self._count_model(Chemical)
 
-    def list_chemicals(self):
-        """List all chemicals.
+    def list_chemical_gene_interactions(self):
+        """List all chemical-gene interactions.
 
-        :rtype: list[Chemical]
+        :rtype: list[ChemGeneIxn]
         """
-        return self._list_model(Chemical)
+        return self._list_model(ChemGeneIxn)
 
     def count_chemical_gene_interactions(self):
         """Counts the chemical-gene interactions in the database
@@ -229,11 +236,24 @@ class Manager(AbstractManager, _PyCTDManager):
     def enrich_chemicals(self, graph):
         """Finds chemicals that can be mapped and enriched with the CTD
 
-        :param pybel.BELGraph graph:
+        :param pybel.BELGraph graph: A BEL graph
         """
-        raise NotImplementedError
+        for chemical_node, data in graph.nodes(data=True):
+            namespace = data.get(NAMESPACE)
+            if namespace not in {'MESHC', 'MESH'}:
+                continue
 
-    def to_bel_graph(self):
+            identifier = data.get(IDENTIFIER)
+            name = data.get(NAME)
+
+            if identifier is not None:
+                self.enrich_graph_chemical(graph, identifier)
+            elif name is not None:
+                self.enrich_graph_chemical(graph, name)
+            else:
+                raise KeyError
+
+    def to_bel(self):
         """Converts all possible aspects of the database to BEL.
 
         :rtype: pybel.BELGraph
@@ -248,7 +268,7 @@ class Manager(AbstractManager, _PyCTDManager):
         """
         graph = BELGraph(name='CTD', version='1.0.0')
 
-        for ixn in tqdm(self.session.query(ChemGeneIxn).all(), total=self.count_chemical_gene_interactions()):
+        for ixn in tqdm(self.list_chemical_gene_interactions(), total=self.count_chemical_gene_interactions()):
             add_chemical_gene_interaction(graph, ixn)
 
         return graph
