@@ -252,8 +252,3 @@ class Manager(AbstractManager, _PyCTDManager):
             add_chemical_gene_interaction(graph, ixn)
 
         return graph
-
-    def upload_bel_graph(self, connection=None):
-        """Converts CTD to BEL and uploads to PyBEL"""
-        graph = self.to_bel_graph()
-        pybel.to_database(graph, connection=connection)
