@@ -7,7 +7,7 @@ import sys
 import click
 
 from .manager import Manager
-from .models import Action, Chemical, Gene
+from .models import Action, ChemGeneIxn, Chemical, Gene
 
 main = Manager.get_cli()
 
@@ -171,6 +171,24 @@ def get(manager, ixn_id):
 
     for gene_form in ixn.gene_forms:
         click.echo('Gene Form: {}'.format(gene_form))
+
+
+@ixns.command()
+@click.option('--limit', type=int, default=5)
+@click.option('--offset', type=int)
+@click.pass_obj
+def ls(manager, limit, offset):
+    """List chemical-gene interactions"""
+    query = manager.session.query(ChemGeneIxn)
+
+    if limit > 0:
+        query = query.limit(limit)
+
+    if offset is not None:
+        query = query.offset(offset)
+
+    for ixn in query:
+        click.echo(ixn)
 
 
 @manage.group()
