@@ -2,6 +2,7 @@
 
 """Run this script with :code:`python3 -m bio2bel_ctd`"""
 
+import logging
 import sys
 
 import click
@@ -11,6 +12,8 @@ from .models import Action, ChemGeneIxn, Chemical, Gene
 
 main = Manager.get_cli()
 
+logging.getLogger('pyctd.manager.database').setLevel(logging.DEBUG)
+logging.basicConfig(level=logging.DEBUG)
 
 @main.group()
 def manage():
