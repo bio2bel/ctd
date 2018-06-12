@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 
-"""
+"""Test enrichment functions.
 
 Example page: http://ctdbase.org/detail.go?type=relationship&ixnId=3020460
-
 """
 
 import unittest
@@ -26,9 +25,15 @@ ex_chebi_id = abundance(namespace='CHEBI', identifier='34873')
 abcc6 = rna(namespace='ENTREZ', name='ABCC6', identifier='368')
 
 
-class TestStuff(PopulatedDatabaseMixin):
+class TestEnrichment(PopulatedDatabaseMixin):
+    """Tests enrichment functions."""
+
     def help_test_graph(self, graph, c_tuple):
-        """Diethylnitrosamine results in decreased expression of ABCC6 mRNA"""
+        """Test "Diethylnitrosamine results in decreased expression of ABCC6 mRNA" gets added.
+
+        :type graph: pybel.BELGraph
+        :param c_tuple:
+        """
         self.assertEqual(1, graph.number_of_nodes())
         self.assertEqual(0, graph.number_of_edges())
 
