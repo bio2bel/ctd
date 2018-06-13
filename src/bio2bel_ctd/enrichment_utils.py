@@ -583,18 +583,20 @@ def add_ixn_increases_chemical_synthesis(graph, ixn):
     """
     chemical = get_dsl_chemical(ixn)
     protein = get_dsl_gene(ixn)
-    citation = get_citation(ixn)
 
-    return graph.add_qualified_edge(
-        protein,
-        chemical,
-        INCREASES,
-        evidence=ixn.interaction,
-        citation=citation,
-        annotations={
-            'Species': str(ixn.organism_id)
-        },
-    )
+    return [
+        graph.add_qualified_edge(
+            protein,
+            chemical,
+            INCREASES,
+            evidence=ixn.interaction,
+            citation=pubmed.pubmed_id,
+            annotations={
+                'Species': str(ixn.organism_id)
+            },
+        )
+        for pubmed in ixn.pubmed_ids
+    ]
 
 
 def add_chemical_gene_interaction(graph, ixn):
