@@ -56,7 +56,7 @@ class Manager(AbstractManager, _PyCTDManager):
     """Bio2BEL manager for the CTD."""
 
     module_name = MODULE_NAME
-
+    flask_admin_models = [Gene, Chemical, Disease, Pathway, ChemGeneIxn]
     # Compensate for some weird structuring of PyCTD code
     tables = get_table_configurations()
 
