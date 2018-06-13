@@ -85,19 +85,13 @@ class Manager(AbstractManager, _PyCTDManager):
         if not urls:
             urls = _get_urls()
 
-        log.info('Update CTD database from %s', urls)
-
-        self.drop_all()
+        log.info('downloading CTD database from %s', urls)
         self.download_urls(urls=urls, force_download=force_download)
-        self.create_all()
+        log.info('importing tables')
         self.import_tables(only_tables=only_tables, exclude_tables=(exclude_tables or _exclude_tables))
-        self.session.close()
 
-    def count_genes(self):
-        """Counts the genes in the database
-
-        :rtype: int
-        """
+    def count_genes(self) -> int:
+        """Count the genes in the database."""
         return self._count_model(Gene)
 
     def list_chemicals(self):
@@ -107,11 +101,8 @@ class Manager(AbstractManager, _PyCTDManager):
         """
         return self._list_model(Chemical)
 
-    def count_chemicals(self):
-        """Counts the chemicals in the database
-
-        :rtype: int
-        """
+    def count_chemicals(self) -> int:
+        """Count the chemicals in the database."""
         return self._count_model(Chemical)
 
     def list_chemical_gene_interactions(self):
@@ -121,25 +112,16 @@ class Manager(AbstractManager, _PyCTDManager):
         """
         return self._list_model(ChemGeneIxn)
 
-    def count_chemical_gene_interactions(self):
-        """Counts the chemical-gene interactions in the database
-
-        :rtype: int
-        """
+    def count_chemical_gene_interactions(self) -> int:
+        """Count the chemical-gene interactions in the database."""
         return self._count_model(ChemGeneIxn)
 
-    def count_pathways(self):
-        """Counts the pathways in the database
-
-        :rtype: int
-        """
+    def count_pathways(self) -> int:
+        """Count the pathways in the database."""
         return self._count_model(Pathway)
 
-    def count_diseases(self):
-        """Counts the diseases in the database
-
-        :rtype: int
-        """
+    def count_diseases(self) -> int:
+        """Count the diseases in the database."""
         return self._count_model(Disease)
 
     def summarize(self):
