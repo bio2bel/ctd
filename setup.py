@@ -24,10 +24,11 @@ CLASSIFIERS = [
 ]
 INSTALL_REQUIRES = [
     'pybel>=0.11.1',
-    'bio2bel>=0.0.9',
+    'bio2bel>=0.1.4',
     'pyctd',
     'click',
     'tqdm',
+    'bio2bel_mesh',
 ]
 EXTRAS_REQUIRE = {
     'web': ['flask', 'flask-admin'],

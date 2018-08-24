@@ -1,74 +1,57 @@
 # -*- coding: utf-8 -*-
 
 import logging
+from typing import Set
 
-from pybel.constants import DECREASES, INCREASES, REGULATES, VARIANTS
+from pybel import BELGraph
+from pybel.constants import DECREASES, INCREASES, REGULATES
 from pybel.dsl import (
-    abundance as abundance_dsl, activity, complex_abundance as complex_abundance_dsl, fragment, gene as gene_dsl, gmod,
-    pmod, protein as protein_dsl, reaction, rna as rna_dsl, translocation,
+    CentralDogma, abundance as abundance_dsl, activity, complex_abundance as complex_abundance_dsl, fragment,
+    gene as gene_dsl, gmod, pmod, protein as protein_dsl, reaction, rna as rna_dsl, translocation,
 )
+from .constants import MODULE_NAME
+from .models import ChemGeneIxn
 
 log = logging.getLogger('bio2bel_ctd')
 
 
-def get_dsl_chemical(ixn):
-    """Returns a PyBEL DSL object for the chemical from the interaction
-
-    :param pyctd.manager.models.ChemGeneIxn ixn: A chemical-gene interaction
-    :rtype: pybel.dsl.abundance
-    """
+def get_dsl_chemical(ixn: ChemGeneIxn) -> abundance_dsl:
+    """Return a PyBEL DSL object for the chemical from the interaction."""
     return abundance_dsl(
-        namespace='MESH',
+        namespace='mesh',
         name=str(ixn.chemical.chemical_name),
         identifier=str(ixn.chemical.chemical_id)
     )
 
 
-def get_dsl_gene(ixn):
-    """Returns a PyBEL DSL object for the gene from the interaction
+def get_dsl_gene(ixn: ChemGeneIxn) -> CentralDogma:
+    """Return a PyBEL DSL object for the gene from the interaction."""
+    gene_forms = list(ixn.gene_forms)
 
-    :param pyctd.manager.models.ChemGeneIxn ixn: A chemical-gene interaction
-    :rtype: pybel.dsl.gene or pybel.dsl.rna or pybel.dsl.protein
-    """
-    kwargs = dict(
-        namespace='ENTREZ',
+    # do checking here too?
+    gene_form = gene_forms[0].gene_form
+
+    if gene_form == 'gene':
+        dsl = gene_dsl
+    elif gene_form == 'mRNA':
+        dsl = rna_dsl
+    elif gene_form == 'protein':
+        dsl = protein_dsl
+    else:
+        raise ValueError('unknown form: {}'.format(gene_form))
+
+    return dsl(
+        namespace='ncbigene',
         name=str(ixn.gene.gene_symbol),
         identifier=str(ixn.gene.gene_id)
     )
 
-    forms = list(ixn.gene_forms)
 
-    # do checking here too?
-    form = forms[0].gene_form
-
-    if form == 'gene':
-        return gene_dsl(**kwargs)
-
-    if form == 'mRNA':
-        return rna_dsl(**kwargs)
-
-    if form == 'protein':
-        return protein_dsl(**kwargs)
-
-    raise ValueError('unknown form: {}'.format(form))
-
-
-def get_citation(ixn):
-    """Extracts the first PubMed identifier for this interaction
-
-    :param pyctd.manager.models.ChemGeneIxn ixn: A chemical-gene interaction
-    :rtype: str
+def _ixn_is_changes_entity(ixn: ChemGeneIxn, interaction_action: str, gene_form: str):
     """
-    pubmed_models = list(ixn.pubmed_ids)
-    pubmed_model = pubmed_models[0]
-    return str(pubmed_model.pubmed_id)
-
-
-def _ixn_is_changes_entity(ixn, interaction_action, gene_form):
-    """
-    :param pyctd.manager.models.ChemGeneIxn ixn: A chemical-gene interaction
-    :param str interaction_action:
-    :param str gene_form:
+    :param ixn: A chemical-gene interaction
+    :param interaction_action:
+    :param gene_form:
     :rtype: bool
     """
     actions = list(ixn.interaction_actions)
@@ -82,16 +65,15 @@ def _ixn_is_changes_entity(ixn, interaction_action, gene_form):
     )
 
 
-def _ixn_is_changes_gene(ixn, interaction_action):
+def _ixn_is_changes_gene(ixn: ChemGeneIxn, interaction_action: str) -> bool:
     """
     :param pyctd.manager.models.ChemGeneIxn ixn: A chemical-gene interaction
     :param str interaction_action:
-    :rtype: bool
     """
     return _ixn_is_changes_entity(ixn, interaction_action, 'gene')
 
 
-def _ixn_is_changes_mrna(ixn, interaction_action):
+def _ixn_is_changes_mrna(ixn: ChemGeneIxn, interaction_action: str) -> bool:
     """
     :param pyctd.manager.models.ChemGeneIxn ixn: A chemical-gene interaction
     :param str interaction_action:
@@ -100,7 +82,7 @@ def _ixn_is_changes_mrna(ixn, interaction_action):
     return _ixn_is_changes_entity(ixn, interaction_action, 'mRNA')
 
 
-def _ixn_is_changes_protein(ixn, interaction_action):
+def _ixn_is_changes_protein(ixn: ChemGeneIxn, interaction_action: str) -> bool:
     """
     :param pyctd.manager.models.ChemGeneIxn ixn: A chemical-gene interaction
     :param str interaction_action:
@@ -109,7 +91,7 @@ def _ixn_is_changes_protein(ixn, interaction_action):
     return _ixn_is_changes_entity(ixn, interaction_action, 'protein')
 
 
-def ixn_is_increases_mrna(ixn):
+def ixn_is_increases_mrna(ixn: ChemGeneIxn) -> bool:
     """Checks if the interaction results in the increase of the expression of the mRNA of the gene
 
     :param pyctd.manager.models.ChemGeneIxn ixn: A chemical-gene interaction
@@ -118,7 +100,7 @@ def ixn_is_increases_mrna(ixn):
     return _ixn_is_changes_mrna(ixn, 'increases^expression')
 
 
-def ixn_is_decreases_mrna(ixn):
+def ixn_is_decreases_mrna(ixn: ChemGeneIxn):
     """Checks if the interaction results in the decrease of the expression of the mRNA of the gene
 
     :param pyctd.manager.models.ChemGeneIxn ixn: A chemical-gene interaction
@@ -127,7 +109,7 @@ def ixn_is_decreases_mrna(ixn):
     return _ixn_is_changes_mrna(ixn, 'decreases^expression')
 
 
-def ixn_is_regulates_mrna(ixn):
+def ixn_is_regulates_mrna(ixn: ChemGeneIxn):
     """Checks if the interaction results in the regulation of the expression of the mRNA of the gene
 
     :param pyctd.manager.models.ChemGeneIxn ixn: A chemical-gene interaction
@@ -136,7 +118,7 @@ def ixn_is_regulates_mrna(ixn):
     return _ixn_is_changes_mrna(ixn, 'affects^expression')
 
 
-def ixn_is_increases_protein(ixn):
+def ixn_is_increases_protein(ixn: ChemGeneIxn):
     """Checks if the interaction results in the increase of the expression of the protein of the gene
 
     :param pyctd.manager.models.ChemGeneIxn ixn: A chemical-gene interaction
@@ -145,7 +127,7 @@ def ixn_is_increases_protein(ixn):
     return _ixn_is_changes_protein(ixn, 'increases^expression')
 
 
-def ixn_is_decreases_protein(ixn):
+def ixn_is_decreases_protein(ixn: ChemGeneIxn):
     """Checks if the interaction results in the decrease of the expression of the protein of the gene
 
     :param pyctd.manager.models.ChemGeneIxn ixn: A chemical-gene interaction
@@ -154,7 +136,7 @@ def ixn_is_decreases_protein(ixn):
     return _ixn_is_changes_protein(ixn, 'decreases^expression')
 
 
-def ixn_is_regulates_protein(ixn):
+def ixn_is_regulates_protein(ixn: ChemGeneIxn):
     """Checks if the interaction results in the decrease of the expression of the protein of the gene
 
     :param pyctd.manager.models.ChemGeneIxn ixn: A chemical-gene interaction
@@ -163,7 +145,7 @@ def ixn_is_regulates_protein(ixn):
     return _ixn_is_changes_protein(ixn, 'affects^expression')
 
 
-def ixn_is_increases_activity(ixn):
+def ixn_is_increases_activity(ixn: ChemGeneIxn):
     """Checks if the interaction results in the decrease of the activity of the protein of the gene
 
     :param pyctd.manager.models.ChemGeneIxn ixn: A chemical-gene interaction
@@ -172,7 +154,7 @@ def ixn_is_increases_activity(ixn):
     return _ixn_is_changes_protein(ixn, 'increases^activity')
 
 
-def ixn_is_decreases_activity(ixn):
+def ixn_is_decreases_activity(ixn: ChemGeneIxn):
     """Checks if the interaction results in the decrease of the activity of the protein of the gene
 
     :param pyctd.manager.models.ChemGeneIxn ixn: A chemical-gene interaction
@@ -181,45 +163,46 @@ def ixn_is_decreases_activity(ixn):
     return _ixn_is_changes_protein(ixn, 'decreases^activity')
 
 
-def ixn_is_increases_phosphorylation(ixn):
+def ixn_is_increases_phosphorylation(ixn: ChemGeneIxn):
     return _ixn_is_changes_protein(ixn, 'increases^phosphorylation')
 
 
-def ixn_is_decreases_phosphorylation(ixn):
+def ixn_is_decreases_phosphorylation(ixn: ChemGeneIxn):
     return _ixn_is_changes_protein(ixn, 'decreases^phosphorylation')
 
 
-def ixn_is_increases_hydroxylation(ixn):
+def ixn_is_increases_hydroxylation(ixn: ChemGeneIxn):
     return _ixn_is_changes_protein(ixn, 'increases^hydroxylation')
 
 
-def ixn_is_decreases_hydroxylation(ixn):
+def ixn_is_decreases_hydroxylation(ixn: ChemGeneIxn):
     return _ixn_is_changes_protein(ixn, 'decreases^hydroxylation')
 
 
-def _add_ixn_causal_expression(graph, ixn, edge_type):
+def _add_ixn_causal_expression(graph: BELGraph, ixn: ChemGeneIxn, edge_type) -> Set[str]:
     """Adds an interaction to the graph after
 
-    :param pybel.BELGraph graph: A BEL graph
-    :param pyctd.manager.models.ChemGeneIxn ixn: A chemical-gene interaction
     :param str edge_type: Either :data:`pybel.constants.INCREASES` or :data:`pybel.constants.DECREASES`
     :return: The hash of the added edge
     :rtype: str
     """
     gene = get_dsl_gene(ixn)
     chemical = get_dsl_chemical(ixn)
-    citation = get_citation(ixn)
 
-    return graph.add_qualified_edge(
-        chemical,
-        gene,
-        edge_type,
-        evidence=ixn.interaction,
-        citation=citation,
-        annotations={
-            'Species': str(ixn.organism_id)
-        }
-    )
+    return {
+        graph.add_qualified_edge(
+            chemical,
+            gene,
+            edge_type,
+            evidence=ixn.interaction,
+            citation=str(reference.pubmed_id),
+            annotations={
+                'Species': str(ixn.organism_id),
+                'bio2bel': MODULE_NAME
+            }
+        )
+        for reference in ixn.pubmed_ids
+    }
 
 
 def add_ixn_increases_expression(graph, ixn):
@@ -255,7 +238,7 @@ def add_ixn_regulates_expression(graph, ixn):
     return _add_ixn_causal_expression(graph, ixn, REGULATES)
 
 
-def _add_ixn_causal_actvity(graph, ixn, edge_type):
+def _add_ixn_causal_actvity(graph: BELGraph, ixn: ChemGeneIxn, edge_type) -> Set[str]:
     """Adds an interaction to the graph after
 
     :param pybel.BELGraph graph: A BEL graph
@@ -266,81 +249,70 @@ def _add_ixn_causal_actvity(graph, ixn, edge_type):
     """
     gene = get_dsl_gene(ixn)
     chemical = get_dsl_chemical(ixn)
-    citation = get_citation(ixn)
 
-    return graph.add_qualified_edge(
-        chemical,
-        gene,
-        edge_type,
-        evidence=ixn.interaction,
-        citation=citation,
-        annotations={
-            'Species': str(ixn.organism_id)
-        },
-        object_modifier=activity(),
-    )
+    return {
+        graph.add_qualified_edge(
+            chemical,
+            gene,
+            edge_type,
+            evidence=ixn.interaction,
+            citation=str(reference.pubmed_id),
+            annotations={
+                'Species': str(ixn.organism_id),
+                'bio2bel': MODULE_NAME
+            },
+            object_modifier=activity(),
+        )
+        for reference in ixn.pubmed_ids
+    }
 
 
-def add_ixn_increases_activity(graph, ixn):
-    """Adds an interaction that represents the chemical increasing the activity of a protein
-
-    :param pybel.BELGraph graph: A BEL graph
-    :param pyctd.manager.models.ChemGeneIxn ixn: A chemical-gene interaction
-    :return: The hash of the added edge
-    :rtype: str
-    """
+def add_ixn_increases_activity(graph: BELGraph, ixn: ChemGeneIxn):
+    """Add an interaction that represents the chemical increasing the activity of a protein."""
     return _add_ixn_causal_actvity(graph, ixn, INCREASES)
 
 
-def add_ixn_decreases_activity(graph, ixn):
-    """Adds an interaction that represents the chemical decreasing the activity of a protein
-
-    :param pybel.BELGraph graph: A BEL graph
-    :param pyctd.manager.models.ChemGeneIxn ixn: A chemical-gene interaction
-    :return: The hash of the added edge
-    :rtype: str
-    """
+def add_ixn_decreases_activity(graph: BELGraph, ixn: ChemGeneIxn):
+    """Add an interaction that represents the chemical decreasing the activity of a protein."""
     return _add_ixn_causal_actvity(graph, ixn, DECREASES)
 
 
-def _add_ixn_changes_pmod(graph, ixn, edge_type, pmod_name):
+def _add_ixn_changes_pmod(graph: BELGraph, ixn: ChemGeneIxn, edge_type, pmod_name):
     chemical = get_dsl_chemical(ixn)
+    protein = get_dsl_gene(ixn).with_variants(pmod(name=pmod_name))
 
-    protein = get_dsl_gene(ixn)
-    protein[VARIANTS] = [pmod(name=pmod_name)]
-
-    citation = get_citation(ixn)
-
-    return graph.add_qualified_edge(
-        chemical,
-        protein,
-        edge_type,
-        evidence=ixn.interaction,
-        citation=citation,
-        annotations={
-            'Species': str(ixn.organism_id)
-        },
-    )
+    return {
+        graph.add_qualified_edge(
+            chemical,
+            protein,
+            edge_type,
+            evidence=ixn.interaction,
+            citation=str(reference.pubmed_id),
+            annotations={
+                'Species': str(ixn.organism_id)
+            },
+        )
+        for reference in ixn.pubmed_ids
+    }
 
 
-def _add_ixn_changes_gmod(graph, ixn, edge_type, pmod_name):
+def _add_ixn_changes_gmod(graph: BELGraph, ixn: ChemGeneIxn, edge_type: str, pmod_name: str) -> Set[str]:
     chemical = get_dsl_chemical(ixn)
+    gene = get_dsl_gene(ixn).with_variants(gmod(name=pmod_name))
 
-    gene = get_dsl_gene(ixn)
-    gene[VARIANTS] = [gmod(name=pmod_name)]
-
-    citation = get_citation(ixn)
-
-    return graph.add_qualified_edge(
-        chemical,
-        gene,
-        edge_type,
-        evidence=ixn.interaction,
-        citation=citation,
-        annotations={
-            'Species': str(ixn.organism_id)
-        },
-    )
+    return {
+        graph.add_qualified_edge(
+            chemical,
+            gene,
+            edge_type,
+            evidence=ixn.interaction,
+            citation=str(reference.pubmed_id),
+            annotations={
+                'Species': str(ixn.organism_id)
+            },
+        )
+        for reference in ixn.pubmed_ids
+    }
 
 
 def add_ixn_increases_methylation(graph, ixn):
@@ -454,13 +426,12 @@ def ixn_is_binding(ixn):
     return _ixn_is_changes_protein(ixn, 'affects^binding')
 
 
-def add_ixn_binding(graph, ixn):
-    """Adds an interaction that represents the chemical binding to a protein
+def add_ixn_binding(graph: BELGraph, ixn: ChemGeneIxn) -> Set[str]:
+    """Add an interaction that represents the chemical binding to a protein.
 
-    :param pybel.BELGraph graph: A BEL graph
-    :param pyctd.manager.models.ChemGeneIxn ixn: A chemical-gene interaction
+    :param graph: A BEL graph
+    :param ixn: A chemical-gene interaction
     :return: The hash of the added edge
-    :rtype: str
     """
     chemical = get_dsl_chemical(ixn)
     protein = get_dsl_gene(ixn)
@@ -469,24 +440,24 @@ def add_ixn_binding(graph, ixn):
         protein
     ])
 
-    citation = get_citation(ixn)
+    return {
+        graph.add_increases(
+            chemical,
+            chemical_protein_complex,
+            evidence=ixn.interaction,
+            citation=str(reference.pubmed_id),
+            annotations={
+                'Species': str(ixn.organism_id)
+            },
+        )
+        for reference in ixn.pubmed_ids
+    }
 
-    return graph.add_qualified_edge(
-        chemical,
-        chemical_protein_complex,
-        INCREASES,
-        evidence=ixn.interaction,
-        citation=citation,
-        annotations={
-            'Species': str(ixn.organism_id)
-        },
-    )
 
-
-def ixn_is_decreasing_expression_and_activity(ixn):
+def ixn_is_decreasing_expression_and_activity(ixn: ChemGeneIxn):
     """
 
-    :param pyctd.manager.models.ChemGeneIxn ixn: A chemical-gene interaction
+    :param ixn: A chemical-gene interaction
     :rtype: bool
 
     Chemical: 103D5R
@@ -499,7 +470,7 @@ def ixn_is_decreasing_expression_and_activity(ixn):
     raise NotImplementedError  # TODO
 
 
-def ixn_is_binding_and_increasing(ixn):
+def ixn_is_binding_and_increasing(ixn: ChemGeneIxn):
     """
 
     :param pyctd.manager.models.ChemGeneIxn ixn: A chemical-gene interaction
@@ -515,72 +486,55 @@ def ixn_is_binding_and_increasing(ixn):
     raise NotImplementedError  # TODO
 
 
-def add_ixn_affect_localization(graph, ixn):
-    """
-
-    :param pybel.BELGraph graph: A BEL graph
-    :param pyctd.manager.models.ChemGeneIxn ixn: A chemical-gene interaction
-    :return: The hash of the added edge
-    :rtype: str
-    """
-    chemical = get_dsl_chemical(ixn)
-    protein = get_dsl_gene(ixn)
-    citation = get_citation(ixn)
-
-    return graph.add_qualified_edge(
-        chemical,
-        protein,
-        REGULATES,
-        evidence=ixn.interaction,
-        citation=citation,
-        annotations={
-            'Species': str(ixn.organism_id)
-        },
-        object_modifier=translocation({}, {})
-    )
-
-
-def add_ixn_increases_cleavage(graph, ixn):
-    """
-
-    :param pybel.BELGraph graph: A BEL graph
-    :param pyctd.manager.models.ChemGeneIxn ixn: A chemical-gene interaction
-    :return: The hash of the added edge
-    :rtype: str
-    """
+def add_ixn_affect_localization(graph: BELGraph, ixn: ChemGeneIxn) -> Set[str]:
+    """"""
     chemical = get_dsl_chemical(ixn)
     protein = get_dsl_gene(ixn)
 
-    cleaved_protein = get_dsl_gene(ixn)
-    cleaved_protein[VARIANTS] = [fragment()]
+    return {
+        graph.add_qualified_edge(
+            chemical,
+            protein,
+            REGULATES,
+            evidence=ixn.interaction,
+            citation=str(reference.pubmed_id),
+            annotations={
+                'Species': str(ixn.organism_id),
+                'bio2bel': MODULE_NAME
+            },
+            object_modifier=translocation({}, {})
+        )
+        for reference in ixn.pubmed_ids
+    }
 
-    citation = get_citation(ixn)
+
+def add_ixn_increases_cleavage(graph: BELGraph, ixn: ChemGeneIxn) -> Set[str]:
+    """"""
+    chemical = get_dsl_chemical(ixn)
+    protein = get_dsl_gene(ixn)
+    cleaved_protein = protein.with_variants(fragment())
 
     cleavage_reaction = reaction(
         reactants=[protein],
         products=[cleaved_protein]
     )
+    return {
+        graph.add_increases(
+            chemical,
+            cleavage_reaction,
+            evidence=ixn.interaction,
+            citation=str(reference.pubmed_id),
+            annotations={
+                'Species': str(ixn.organism_id),
+                'bio2bel': MODULE_NAME
+            },
+        )
+        for reference in ixn.pubmed_ids
+    }
 
-    return graph.add_qualified_edge(
-        chemical,
-        cleavage_reaction,
-        INCREASES,
-        evidence=ixn.interaction,
-        citation=citation,
-        annotations={
-            'Species': str(ixn.organism_id)
-        },
-    )
 
-
-def add_ixn_increases_chemical_synthesis(graph, ixn):
-    """
-
-    :param pybel.BELGraph graph: A BEL graph
-    :param pyctd.manager.models.ChemGeneIxn ixn: A chemical-gene interaction
-    :return: The hash of the added edge
-    :rtype: str
-    """
+def add_ixn_increases_chemical_synthesis(graph: BELGraph, ixn: ChemGeneIxn):
+    """"""
     chemical = get_dsl_chemical(ixn)
     protein = get_dsl_gene(ixn)
 
@@ -599,7 +553,7 @@ def add_ixn_increases_chemical_synthesis(graph, ixn):
     ]
 
 
-def add_chemical_gene_interaction(graph, ixn):
+def add_chemical_gene_interaction(graph, ixn: ChemGeneIxn):
     """Adds a chemical-gene interaction to the BEL graph
 
     :param pybel.BELGraph graph: A BEL graph
